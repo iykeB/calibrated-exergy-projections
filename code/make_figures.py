@@ -26,13 +26,21 @@ BLUE, ORANGE, AQUA, VIOLET, RED = "#2a78d6", "#eb6834", "#1baf7a", "#4a3aa7", "#
 INK, INK2, MUTED, GRID = "#0b0b0b", "#52514e", "#8a8984", "#e6e5e1"
 plt.rcParams.update({
     "font.family": "Arial", "font.size": 8.5, "axes.labelsize": 8.5, "xtick.labelsize": 8,
-    "ytick.labelsize": 8, "legend.fontsize": 6.6, "axes.edgecolor": INK2, "axes.labelcolor": INK,
+    "ytick.labelsize": 8, "legend.fontsize": 7, "axes.edgecolor": INK2, "axes.labelcolor": INK,
     "xtick.color": INK2, "ytick.color": INK2, "axes.linewidth": 0.6, "axes.spines.top": False,
     "axes.spines.right": False, "axes.grid": True, "grid.color": GRID, "grid.linewidth": 0.5,
     "axes.axisbelow": True, "legend.frameon": False, "savefig.dpi": 600, "lines.linewidth": 1.6,
+    "pdf.fonttype": 42, "ps.fonttype": 42, "mathtext.fontset": "custom",
+    "mathtext.rm": "Arial", "mathtext.it": "Arial:italic", "mathtext.bf": "Arial:bold",
 })
 UH = {"ex": 1385.73, "phi": 28.85, "imp": 700.0}  # Utlu and Hepbasli (2006), 2020
 ORIGIN = 2000
+
+
+def save(fig, p):
+    """Write the PNG and a vector PDF (embedded TrueType fonts) next to it."""
+    fig.savefig(p, bbox_inches="tight", facecolor="white")
+    fig.savefig(p[:-4] + ".pdf", bbox_inches="tight", facecolor="white")
 
 
 def panel(ax, letter):
@@ -109,10 +117,12 @@ def figure_a():
         ax.set_xlabel("Year")
         ax.set_ylabel(lab[k])
         panel(ax, letter)
-    axes[0].legend(loc="upper left", fontsize=6.0)
     fig.tight_layout(w_pad=1.4)
+    hd, lb = axes[0].get_legend_handles_labels()
+    fig.legend(hd, [l.replace(",\n", ", ") for l in lb], loc="lower center", bbox_to_anchor=(0.5, 1.0),
+               ncol=3, fontsize=7)
     p = os.path.join(FIG, "FigA_turkiye_2000_origin.png")
-    fig.savefig(p, bbox_inches="tight", facecolor="white")
+    save(fig, p)
     plt.close(fig)
     print("wrote", p)
 
@@ -124,31 +134,32 @@ def figure_b():
     ax = axes[0]
     bands = ["1-5", "6-10", "11-24", "all"]
     x = np.arange(len(bands))
-    for j, (k, col, nm) in enumerate((("ex", BLUE, "Exergy input"), ("phi", AQUA, "Exergy efficiency"),
-                                      ("imp", VIOLET, "Improvement potential"))):
+    for j, (k, col, mk, nm) in enumerate((("ex", BLUE, "o", "Exergy input"), ("phi", AQUA, "s", "Exergy efficiency"),
+                                          ("imp", VIOLET, "D", "Improvement potential"))):
         ev = R["driver|persist"][k]
         c = np.array([ev[b]["cover"] for b in bands]) * 100
         ci = np.array([ev[b]["ci95"] for b in bands]) * 100
-        ax.errorbar(x + (j - 1) * 0.18, c, yerr=[c - ci[:, 0], ci[:, 1] - c], fmt="o", color=col, ms=4.5,
+        ax.errorbar(x + (j - 1) * 0.18, c, yerr=[c - ci[:, 0], ci[:, 1] - c], fmt=mk, color=col, ms=4.5,
                     mec="white", mew=0.5, elinewidth=1.0, capsize=2, label=nm)
     ax.axhline(90, color=INK2, lw=0.8, ls="--")
     ax.set_xticks(x, ["1 to 5", "6 to 10", "11 to 24", "All"])
     ax.set_xlabel("Forecast horizon (years)")
     ax.set_ylabel("Coverage of 90% interval (%)")
     ax.set_ylim(70, 100)
-    ax.legend(loc="lower left", fontsize=6.4)
+    ax.legend(loc="lower left", fontsize=7)
     panel(ax, "a")
     ax = axes[1]
     origins = ["o2000", "o2005", "o2010", "o2015"]
     xo = np.arange(len(origins))
-    cols = {"S0": INK2, "S1": BLUE, "S2": AQUA, "S3": ORANGE, "S4": RED}
+    cols = {"S0": INK2, "S1": BLUE, "S2": AQUA, "S3": VIOLET, "S4": RED}
+    mks = {"S0": "o", "S1": "s", "S2": "^", "S3": "v", "S4": "P"}
     names = {"S0": "S0 exchangeable", "S1": "S1 growth breaks", "S2": "S2 common shocks",
              "S3": "S3 diverse elasticities", "S4": "S4 shared regional break"}
     for j, s in enumerate(cols):
         m = np.array([S[s][o]["mean"] for o in origins]) * 100
         lo = np.array([S[s][o]["p05"] for o in origins]) * 100
         hi = np.array([S[s][o]["p95"] for o in origins]) * 100
-        ax.errorbar(xo + (j - 2) * 0.12, m, yerr=[m - lo, hi - m], fmt="o", color=cols[s], ms=3.8,
+        ax.errorbar(xo + (j - 2) * 0.12, m, yerr=[m - lo, hi - m], fmt=mks[s], color=cols[s], ms=4.0,
                     mec="white", mew=0.5, elinewidth=0.9, capsize=1.5, label=names[s])
     real = R["by_origin_driver"]
     ax.plot(xo, [real[str(o)]["cover"] * 100 for o in (2000, 2005, 2010, 2015)], "D", color=INK, ms=4.5,
@@ -157,21 +168,16 @@ def figure_b():
     ax.set_xticks(xo, ["2000", "2005", "2010", "2015"])
     ax.set_xlabel("Origin year")
     ax.set_ylabel("Coverage of 90% interval (%)")
-    ax.set_ylim(65, 100)
-    ax.legend(loc="lower right", fontsize=6.0, ncol=2)
+    ax.set_ylim(50, 100)
+    ax.legend(loc="lower right", fontsize=7, ncol=2)
     panel(ax, "b")
     fig.tight_layout(w_pad=2.0)
     p = os.path.join(FIG, "FigB_validation.png")
-    fig.savefig(p, bbox_inches="tight", facecolor="white")
+    save(fig, p)
     plt.close(fig)
     print("wrote", p)
 
 
-if __name__ == "__main__":
-    os.makedirs(FIG, exist_ok=True)
-    figure_1()
-    figure_a()
-    figure_b()
 
 
 def figure_1():
@@ -188,7 +194,7 @@ def figure_1():
     def box(x, y, w, title, body, dash=None):
         ax.add_patch(Rectangle((x, y), w, H, fc="white", ec=LINE, lw=0.8, ls=dash or "-"))
         ax.text(x + w / 2, y + H - 0.12, title, ha="center", va="top", fontsize=7.6, fontweight="bold", color=INK)
-        ax.text(x + w / 2, y + H - 0.4, body, ha="center", va="top", fontsize=6.6, color=INK2, linespacing=1.35)
+        ax.text(x + w / 2, y + H - 0.4, body, ha="center", va="top", fontsize=7, color=INK2, linespacing=1.35)
 
     def arrow(pts):
         xs, ys = zip(*pts)
@@ -207,7 +213,7 @@ def figure_1():
     box(cols["proj"][0], TOP, cols["proj"][1], "Point projector",
         "drift, driver or oracle\nor a published value\nEqs. (4) and (5)")
     box(cols["proj"][0], BOT, cols["proj"][1], "Projection errors",
-        "$e^{Ex}=\\ln(Ex/\\widehat{Ex})$\n$e^{\\varphi}=\\varphi-\\widehat{\\varphi}$\nby origin and horizon $h$\nEq. (6)")
+        "$e^{Ex}=\\ln(Ex/\\hat{Ex})$\n$e^{\\varphi}=\\varphi-\\hat{\\varphi}$\nby origin and horizon $h$\nEq. (6)")
     box(cols["cal"][0], TOP, cols["cal"][1], "Leave one country out",
         "pool the errors of the\nother countries only")
     box(cols["cal"][0], BOT, cols["cal"][1], "Horizon law",
@@ -229,9 +235,9 @@ def figure_1():
     arrow([(mid["out"], TOP), (mid["out"], BOT + H)])
     ytop = TOP + H + 0.28
     arrow([(mid["proj"], TOP + H), (mid["proj"], ytop), (mid["out"], ytop), (mid["out"], TOP + H)])
-    ax.text(mid["cal"], ytop + 0.1, "point value", ha="center", va="bottom", fontsize=6.4, color=INK2)
+    ax.text(mid["cal"], ytop + 0.1, "point value", ha="center", va="bottom", fontsize=7, color=INK2)
     p = os.path.join(FIG, "Fig1_framework.png")
-    fig.savefig(p, bbox_inches="tight", facecolor="white")
+    save(fig, p)
     plt.close(fig)
     print("wrote", p)
 
@@ -249,7 +255,7 @@ def figure_errors():
     for k, col, nm in styles:
         m = [np.mean([abs(np.log(r["ex"] / r["ex_" + k])) for r in rec if r["h"] == h]) for h in hs]
         ax.plot(hs, m, color=col, lw=1.6, label=nm)
-        ax.text(hs[-1] + 0.3, m[-1], nm, color=INK2, fontsize=6.8, va="center")
+        ax.text(hs[-1] + 0.3, m[-1], nm, color=INK2, fontsize=7, va="center")
     ax.set_xlabel("Forecast horizon (years)")
     ax.set_ylabel("Mean absolute log error of $Ex$")
     ax.set_xlim(0, 27.5)
@@ -262,16 +268,16 @@ def figure_errors():
     ax.bar(x - 0.19, w, width=0.36, color=MUTED, label="Relative width")
     ax.bar(x + 0.19, sc, width=0.36, color=BLUE, label="Interval score")
     for xi, a_, b_ in zip(x, w, sc):
-        ax.text(xi - 0.19, a_ + 0.03, f"{a_:.2f}", ha="center", fontsize=6.6, color=INK2)
-        ax.text(xi + 0.19, b_ + 0.03, f"{b_:.2f}", ha="center", fontsize=6.6, color=INK2)
+        ax.text(xi - 0.19, a_ + 0.03, f"{a_:.2f}", ha="center", fontsize=7, color=INK2)
+        ax.text(xi + 0.19, b_ + 0.03, f"{b_:.2f}", ha="center", fontsize=7, color=INK2)
     ax.set_xticks(x, [nm for _, _, nm in styles])
-    ax.set_ylabel("Exergy input, 90% interval")
+    ax.set_ylabel("Width or score (lower is better)")
     ax.set_ylim(0, 1.95)
-    ax.legend(loc="upper right", fontsize=6.4)
+    ax.legend(loc="upper right", fontsize=7)
     panel(ax, "b")
     fig.tight_layout(w_pad=2.0)
     p = os.path.join(FIG, "Fig2_errors_sharpness.png")
-    fig.savefig(p, bbox_inches="tight", facecolor="white")
+    save(fig, p)
     plt.close(fig)
     print("wrote", p)
 
@@ -298,10 +304,19 @@ def figure_outside():
     ax.set_yticks(y, [nm for nm, _ in rows])
     ax.set_xlabel("Coverage of 90% interval (%)")
     ax.set_xlim(25, 102)
-    ax.legend(loc="lower center", bbox_to_anchor=(0.5, 1.01), fontsize=6.6, ncol=3)
+    ax.legend(loc="lower center", bbox_to_anchor=(0.5, 1.01), fontsize=7, ncol=3)
     ax.grid(axis="y", visible=False)
     fig.tight_layout()
     p = os.path.join(FIG, "Fig4_outside_panel.png")
-    fig.savefig(p, bbox_inches="tight", facecolor="white")
+    save(fig, p)
     plt.close(fig)
     print("wrote", p)
+
+
+if __name__ == "__main__":
+    os.makedirs(FIG, exist_ok=True)
+    figure_1()
+    figure_errors()
+    figure_b()
+    figure_outside()
+    figure_a()
