@@ -2,9 +2,8 @@
 
 Code, data and results for the manuscript
 
-> B.I. Simeon, C.H. Kadurumba, *From Point Projections to Calibrated Uncertainty:
-> A Transferable Probabilistic Framework for Energy and Exergy Forecasting of National
-> Transport Systems* (manuscript submitted to *Energy*).
+> B.I. Simeon, C.H. Kadurumba, *A Transferable Probabilistic Framework for Energy and Exergy Forecasting of
+> Transport Systems: From Point Projections to Calibrated Uncertainty* (manuscript submitted to *Energy*).
 
 The framework learns how far a kind of point projection misses, by forecast horizon, from
 comparable countries, and turns any point projection of exergy input, exergy efficiency and
